@@ -38,6 +38,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Memory.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/JITMemoryManager.h"
@@ -489,9 +490,10 @@ LLVMRustWriteOutputFile(LLVMPassManagerRef PMR,
   return true;
 }
 
-extern "C" LLVMModuleRef LLVMRustParseAssemblyFile(const char *Filename) {
+extern "C" LLVMModuleRef LLVMRustParseAssemblyFile(LLVMContextRef C,
+                                                   const char *Filename) {
   SMDiagnostic d;
-  Module *m = ParseAssemblyFile(Filename, d, getGlobalContext());
+  Module *m = ParseAssemblyFile(Filename, d, *unwrap(C));
   if (m) {
     return wrap(m);
   } else {
@@ -540,9 +542,6 @@ extern "C" LLVMValueRef LLVMGetOrInsertFunction(LLVMModuleRef M,
 
 extern "C" LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C) {
   return wrap(Type::getMetadataTy(*unwrap(C)));
-}
-extern "C" LLVMTypeRef LLVMMetadataType(void) {
-  return LLVMMetadataTypeInContext(LLVMGetGlobalContext());
 }
 
 extern "C" LLVMValueRef LLVMBuildAtomicLoad(LLVMBuilderRef B,
@@ -602,4 +601,25 @@ extern "C" LLVMValueRef LLVMInlineAsm(LLVMTypeRef Ty,
     return wrap(InlineAsm::get(unwrap<FunctionType>(Ty), AsmString,
                                Constraints, HasSideEffects,
                                IsAlignStack, (InlineAsm::AsmDialect) Dialect));
+}
+
+/**
+ * This function is intended to be a threadsafe interface into enabling a
+ * multithreaded LLVM. This is invoked at the start of the translation phase of
+ * compilation to ensure that LLVM is ready.
+ *
+ * All of trans properly isolates LLVM with the use of a different
+ * LLVMContextRef per task, thus allowing parallel compilation of different
+ * crates in the same process. At the time of this writing, the use case for
+ * this is unit tests for rusti, but there are possible other applications.
+ */
+extern "C" bool LLVMRustStartMultithreading() {
+    static Mutex lock;
+    bool ret = true;
+    assert(lock.acquire());
+    if (!LLVMIsMultithreaded()) {
+        ret = LLVMStartMultithreaded();
+    }
+    assert(lock.release());
+    return ret;
 }

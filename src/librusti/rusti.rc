@@ -446,26 +446,25 @@ mod tests {
         }
     }
 
-    #[test] #[ignore]
-    fn run_all() {
-        // By default, unit tests are run in parallel. Rusti, on the other hand,
-        // does not enjoy doing this. I suspect that it is because the LLVM
-        // bindings are not thread-safe (when running parallel tests, some tests
-        // were triggering assertions in LLVM (or segfaults). Hence, this
-        // function exists to run everything serially (sadface).
-        //
-        // To get some interesting output, run with RUST_LOG=rusti::tests
+    // FIXME(#6489): these shouldn't be ignored on x86
 
-        debug!("hopefully this runs");
+    #[test] #[ignore(cfg(target_arch = "x86"))]
+    fn basic() {
         run_cmds([""]);
+    }
 
-        debug!("regression test for #5937");
+    #[test] #[ignore(cfg(target_arch = "x86"))]
+    fn test_use() {
         run_cmds(["use core;", ""]);
+    }
 
-        debug!("regression test for #5784");
+    #[test] #[ignore(cfg(target_arch = "x86"))]
+    fn test_let() {
         run_cmds(["let a = 1;"]);
+    }
 
-        debug!("regression test for #5803");
+    #[test] #[ignore(cfg(target_arch = "x86"))]
+    fn test_spawn() {
         run_cmds(["spawn( || println(\"Please don't segfault\") );",
                   "do spawn { println(\"Please?\"); }"]);
     }
