@@ -236,7 +236,7 @@ pub fn compile_rest(sess: Session,
 
     let outputs = outputs.get();
 
-    let (llmod, link_meta) = {
+    let (llcx, llmod, link_meta) = {
 
         let ty_cx = ty::mk_ctxt(sess, def_map, ast_map, freevars,
                                 region_map, rp_set, lang_items);
@@ -318,14 +318,14 @@ pub fn compile_rest(sess: Session,
         let obj_filename = outputs.obj_filename.with_filetype("s");
 
         time(time_passes, ~"LLVM passes", ||
-            link::write::run_passes(sess, llmod, output_type,
-                            &obj_filename));
+            link::write::run_passes(sess, llcx, llmod, output_type,
+                                    &obj_filename));
 
         link::write::run_ndk(sess, &obj_filename, &outputs.obj_filename);
     } else {
         time(time_passes, ~"LLVM passes", ||
-            link::write::run_passes(sess, llmod, sess.opts.output_type,
-                                &outputs.obj_filename));
+            link::write::run_passes(sess, llcx, llmod, sess.opts.output_type,
+                                    &outputs.obj_filename));
     }
 
     let stop_after_codegen =
