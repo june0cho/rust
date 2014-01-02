@@ -10,7 +10,7 @@
 
 //! A helper class for dealing with static archives
 
-use back::link::{get_ar};
+use back::link::{get_ar_prog};
 use driver::session::Session;
 use metadata::filesearch;
 use lib::llvm::{ArchiveRef, llvm};
@@ -38,7 +38,7 @@ pub struct ArchiveRO {
 
 fn run_ar(sess: Session, args: &str, cwd: Option<&Path>,
         paths: &[&Path]) -> ProcessOutput {
-    let ar = get_ar(sess);
+    let ar = get_ar_prog(sess);
 
     let mut args = ~[args.to_owned()];
     let mut paths = paths.iter().map(|p| p.as_str().unwrap().to_owned());
